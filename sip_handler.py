@@ -3,8 +3,55 @@ import time,random
 from rtp_engine import *
 
 class sip_handler ():
+	'''
+	__init__()
+	rückgabe ist nichts
+	es wird das einkommende packet zerlegt und verwertet. 
 
-	def rand_tag(self):
+	rand_tag()
+	erzeutg eine 40 stellige Random ID 
+
+	call_reakt()
+	gibt den nächsten step für das Answer/offer aus
+
+	call_setter()
+	Es wird gesezt das der Call neu ist und alle start Parameter werden getzt 
+
+	add_sdp()
+	ein neu Generites sdp wird in speicher geladen und die Grösse berechnee 
+
+	offer()
+	From und To sind nun getauscht und es kann auch die die C-Seq anders sein. 
+
+	answer()
+	hier wird mit dem gleichen From und To Werten geantwortet wie auch C-seq
+	
+	rip_off_tag()
+	durch suchd das tail von From und To nach einem Tag 
+
+	rip_off_data()
+	Zerlegt die das From oder To 
+	name 
+	Uri 
+	Tail *alle deten nach dem >
+
+
+	get_sdp()
+	gibt den SDP von der Messege aus als Byte wert 
+
+	get_header()
+	Gibt inhalt vom Header wieder
+
+	get_tag()
+	es gibt den Tag 
+	von To oder From wieder
+
+	get_all()
+	gibt den kompletten speicher von der klasse aus
+	'''
+
+
+	def rand_tag(self)->str:
 		i =0
 		ret = ''
 		while i <41:
@@ -17,13 +64,23 @@ class sip_handler ():
 				ret = ret + chr(random.randint(48, 57))
 
 			i += 1
-			'a-z 97 122  A-Z 65 90  0-9  48 57'
-		#print (ret)
 		return ret
 			
 
 	def __init__(self,packet:str,ip_own:str,ip_sender:str)-> None:
 		'''
+		in dieser klasse wir der komplette call gehandelt. 
+
+		es wird nach einer matrix vorgangen 
+		self.status 
+
+		desweitern in der self.options 
+		dort werden die Header für die antworten fest gelegt und können angepassst werden 
+
+
+
+		
+		runtime infos: 
 		rtp_run = start/etablisht/kill #set up RTP and get SDP
 		rtp_media = start/running/stop #play media
 		sdp_send = offer/answer #selekt to send SDP
@@ -90,7 +147,7 @@ class sip_handler ():
 		rr = 0
 		for x in a.split('\r\n'):
 			set = 0
-			if x == '':
+			if x == '':#wenn eine Leer zeile gefunden wurde, beginnt das SDP 
 				sdp = 1
 			if line == 0:
 				name = ''
@@ -114,13 +171,10 @@ class sip_handler ():
 					if i[0] == 'To':
 						a = self.rip_off_tag(i[1])
 						new_to = a['front'] + ';tag=' +a['tag'] + a['more']
-						print (new_to)
-						#self.data[i[0]] = i[1] + ';tag=' + a['tag'] + a['more']
 						self.rip_off_data (i[0],new_to)
 						self.data[i[0]] = new_to
 						set = 1
 					if i[0] == 'From':
-						#self.data[i[0]] = i[1] + ';tag=moppi_answer112'
 						self.rip_off_data (i[0],i[1])
 						set = 0
 					
@@ -140,18 +194,16 @@ class sip_handler ():
 						via += 1
 						self.count['via'] += 1 
 						set = 1
-					#if set == 0:
-						#self.data[i[0]] = i[1]
 					
 					if i[0] == 'Record-Route':
 						self.data[i[0]+'_'+str(rr)] = i[1]
 						rr += 1
 						self.count['rr'] += 1 
 						set = 1
-					if set == 0:
+					if set == 0:#alle andern Header 
 						self.data[i[0]] = i[1]
 
-				else:
+				else:#hier wird nur der SDP ausgewertet
 					if x != '':
 						if first_sdp == 1:
 							self.data['sdp'] = self.data['sdp'] + '\r\n'
@@ -220,9 +272,7 @@ class sip_handler ():
 			if self.options[value]['header_ip'] == 0:
 				ret = 'SIP/2.0'+' '+value +' '+self.options[value]['value'] +'\r\n'
 			else:
-				#ret =  value +' sip:' + self.data['ip_sender'][0] + ':' + str(self.data['ip_sender'][1])  +' SIP/2.0\r\n'
 				ret =  value +' sip:'  + self.data['ip_sender'][0] + ':' + str(self.data['ip_sender'][1])  + ' SIP/2.0\r\n'
-				#ret = value +' '+ self.get_header('Contact')  +' SIP/2.0 \r\n'
 		add_rn = False
 		via = 0
 		rr = 0
@@ -234,10 +284,8 @@ class sip_handler ():
 				
 			if x == 'To':
 				
-				#ret = ret + 'From: ' + self.data['To'] + '\r\n'
 				self.data['detail']['To']['tail']
 				self.data['detail']['To']['uri']
-				#self.data['detail']['To']['name']
 				s1 = self.data['detail']['To']['uri'].split('@')
 				print  (len(s1))
 				
@@ -274,11 +322,7 @@ class sip_handler ():
 				run_standart = False
 				
 			
-			#if 'Via_'+str(via) in self.data:
 			if self.count['via'] != 0 and x == 'Via':
-				#while self.count['via'] > via:
-					#ret = ret + x + ': ' + self.data['Via_'+str(via)] + '\r\n'
-				#ret = ret + 'Via: SIP/2.0/UDP '  + self.data['ip_own'][0] + ':' + str(self.data['ip_own'][1])  + '\r\n'
 				ret = ret + 'Via: SIP/2.0/UDP '  + self.data['ip_own'][0] + ':5060;rport \r\n'
 				
 					#via += 1 
@@ -286,7 +330,6 @@ class sip_handler ():
 				add_rn = False
 				run_standart = False
 			
-			#if 'Record-Route_'+str(rr) in self.data:
 			if self.count['rr'] != 0 and x == 'Record-Route':
 				while self.count['rr'] > rr:
 					ret = ret + x + ': ' + self.data['Record-Route_'+str(rr)]
@@ -297,7 +340,6 @@ class sip_handler ():
 
 			if x in self.data:
 
-				#print ('ist in data: ', self.data[x])
 				if x == 'Content-Length':
 					if x in self.options[value]:
 						ret = ret + x + ': '+ str(self.options[value]['Content-Length'])
@@ -319,7 +361,6 @@ class sip_handler ():
 
 		ret2 = ret2 + b'Reason: Q.850;cause=16;text="Normal call clearing"\r\n'
 		ret2 = ret2 + b'\r\n'
-		#print (ret.encode("utf-8"))
 		return ret2
 
 
@@ -334,7 +375,6 @@ class sip_handler ():
 				ret = 'SIP/2.0'+' '+value +' '+self.options[value]['value'] +'\r\n'
 			else:
 				ret = 'SIP/2.0'+' '+value +' '+ self.get_header('header_sip_ip')  +' hier \r\n'
-				#ret = value +' '+ self.get_header('Contact')  +' SIP/2.0 \r\n'
 		add_rn = False
 		via = 0
 		rr = 0
@@ -344,9 +384,7 @@ class sip_handler ():
 				ret = ret + '\r\n'
 				add_rn = False
 				
-			
-			
-			#if 'Via_'+str(via) in self.data:
+
 			if self.count['via'] != 0 and x == 'Via':
 				while self.count['via'] > via:
 					ret = ret + x + ': ' + self.data['Via_'+str(via)] + '\r\n'
@@ -355,7 +393,6 @@ class sip_handler ():
 				add_rn = False
 				run_standart = False
 			
-			#if 'Record-Route_'+str(rr) in self.data:
 			if self.count['rr'] != 0 and x == 'Record-Route':
 				while self.count['rr'] > rr:
 					ret = ret + x + ': ' + self.data['Record-Route_'+str(rr)] + '\r\n'
@@ -366,7 +403,6 @@ class sip_handler ():
 
 			if x in self.data:
 
-				#print ('ist in data: ', self.data[x])
 				if x == 'Content-Length':
 					if x in self.options[value]:
 						ret = ret + x + ': '+ str(self.options[value]['Content-Length']) + '\r\n'
@@ -381,8 +417,6 @@ class sip_handler ():
 			if self.options[value]['sdp'] == 1:
 				ret2 = ret2 + b'\r\n' +  self.sdp['answer']['sdp']
 
-
-		#print (ret.encode("utf-8"))
 		return ret2
 
 	def rip_off_tag(self,value:str)-> dict:
